@@ -1,32 +1,38 @@
 import { EditorState } from '../state/EditorStateManager';
+import { EditorWithTerminal } from './EditorWithTerminal';
+import { ThemeManager } from '../state/ThemeManager';
 
 // Configuration
-const DEFAULT_EDITOR_WIDTH = 850; // 100 characters at ~8.5px per char
+const DEFAULT_EDITOR_WIDTH = 850;
 const MIN_EDITOR_WIDTH = 300;
 
 export class EditorContainer {
   private container: HTMLElement;
-  private editorsWrapper: HTMLElement;
+  private editorsWrapper!: HTMLElement;
   private onContentChange: (id: string, content: string) => void;
+  private themeManager: ThemeManager;
   private editorElements: Map<string, HTMLElement> = new Map();
+  private editorWithTerminals: Map<string, EditorWithTerminal> = new Map();
   private resizeHandles: Map<string, HTMLElement> = new Map();
   private editorWidths: Map<string, number> = new Map();
   private monaco: any;
   private isMonacoLoaded = false;
   private isResizing: boolean = false;
-  private currentResizeHandle: HTMLElement | null = null;
   private currentResizingEditor: string | null = null;
   private startX: number = 0;
   private startWidth: number = 0;
+  private editorOrder: string[] = [];
 
   constructor(
     container: HTMLElement,
     options: {
       onContentChange: (id: string, content: string) => void;
+      themeManager: ThemeManager;
     }
   ) {
     this.container = container;
     this.onContentChange = options.onContentChange;
+    this.themeManager = options.themeManager;
 
     this.render();
     this.loadMonaco();
@@ -44,7 +50,6 @@ export class EditorContainer {
   private async loadMonaco(): Promise<void> {
     if (this.isMonacoLoaded) return;
 
-    // Wait for Monaco to be loaded from CDN
     const checkMonaco = () => {
       return new Promise<void>((resolve) => {
         if (typeof window !== 'undefined' && (window as any).monaco) {
@@ -61,10 +66,8 @@ export class EditorContainer {
   }
 
   renderEditors(editors: EditorState[]): void {
-    // Update editor order for diff computation
     this.editorOrder = editors.map(e => e.id);
 
-    // Get current editor IDs
     const currentIds = new Set(this.editorElements.keys());
     const newIds = new Set(editors.map(e => e.id));
 
@@ -80,7 +83,6 @@ export class EditorContainer {
       if (!this.editorElements.has(editor.id)) {
         this.createEditorElement(editor, index, editors.length);
       } else {
-        // Update position if needed (for reordering)
         const wrapper = this.editorElements.get(editor.id);
         if (wrapper && wrapper.parentElement) {
           const currentIndex = Array.from(this.editorsWrapper.children).indexOf(wrapper);
@@ -93,41 +95,40 @@ export class EditorContainer {
   }
 
   private createEditorElement(editor: EditorState, index: number, totalEditors: number): void {
-    // Create container for editor
     const editorWrapper = document.createElement('div');
     editorWrapper.className = 'editor-wrapper';
     editorWrapper.dataset.id = editor.id;
 
-    // Get or initialize width
     const width = this.editorWidths.get(editor.id) || DEFAULT_EDITOR_WIDTH;
     editorWrapper.style.width = `${width}px`;
 
-    // Monaco editor container
-    const editorItem = document.createElement('div');
-    editorItem.className = 'editor-item';
-    editorItem.dataset.id = editor.id;
+    // Create EditorWithTerminal component
+    const editorWithTerminal = new EditorWithTerminal(
+      editor.id,
+      editor.name,
+      editorWrapper,
+      {
+        onContentChange: this.onContentChange,
+        themeManager: this.themeManager,
+      }
+    );
 
-    const monacoContainer = document.createElement('div');
-    monacoContainer.className = 'monaco-container';
-    editorItem.appendChild(monacoContainer);
-    editorWrapper.appendChild(editorItem);
+    this.editorWithTerminals.set(editor.id, editorWithTerminal);
+    this.editorElements.set(editor.id, editorWrapper);
 
-    // Add resize handle at the end of this editor (except for the last one)
+    // Add resize handle
     if (index < totalEditors - 1) {
       const resizeHandle = this.createResizeHandle(editor.id);
       editorWrapper.appendChild(resizeHandle);
       this.resizeHandles.set(editor.id, resizeHandle);
     }
 
-    // Insert at correct position
     const children = Array.from(this.editorsWrapper.children);
     if (children[index]) {
       this.editorsWrapper.insertBefore(editorWrapper, children[index]);
     } else {
       this.editorsWrapper.appendChild(editorWrapper);
     }
-
-    this.editorElements.set(editor.id, editorWrapper);
   }
 
   private createResizeHandle(editorId: string): HTMLElement {
@@ -151,11 +152,9 @@ export class EditorContainer {
       this.startWidth = wrapper.offsetWidth;
     }
 
-    // Add global event listeners
     document.addEventListener('mousemove', this.handleResizeMove);
     document.addEventListener('mouseup', this.handleResizeEnd);
 
-    // Add visual feedback
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
   }
@@ -170,18 +169,6 @@ export class EditorContainer {
     if (wrapper) {
       wrapper.style.width = `${newWidth}px`;
       this.editorWidths.set(this.currentResizingEditor, newWidth);
-
-      // Trigger layout update for Monaco editor
-      const editorItem = wrapper.querySelector('.editor-item');
-      if (editorItem) {
-        const monacoContainer = editorItem.querySelector('.monaco-container');
-        if (monacoContainer) {
-          const editorWidget = monacoContainer.querySelector('.monaco-editor');
-          if (editorWidget) {
-            // Monaco will auto-layout due to automaticLayout: true
-          }
-        }
-      }
     }
   };
 
@@ -190,13 +177,10 @@ export class EditorContainer {
 
     this.isResizing = false;
     this.currentResizingEditor = null;
-    this.currentResizeHandle = null;
 
-    // Remove global event listeners
     document.removeEventListener('mousemove', this.handleResizeMove);
     document.removeEventListener('mouseup', this.handleResizeEnd);
 
-    // Reset cursor
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
   };
@@ -204,7 +188,6 @@ export class EditorContainer {
   private moveEditorToPosition(element: HTMLElement, newIndex: number): void {
     const children = Array.from(this.editorsWrapper.children);
 
-    // Find position based on editor wrappers only
     let editorIndex = 0;
     for (let i = 0; i < children.length; i++) {
       const child = children[i] as HTMLElement;
@@ -219,28 +202,20 @@ export class EditorContainer {
       }
     }
 
-    // If we didn't find it in the loop, append at the end
     this.editorsWrapper.appendChild(element);
   }
 
   private removeEditorElement(id: string): void {
     const element = this.editorElements.get(id);
     if (element) {
-      // Dispose Monaco instance if exists
-      const editorItem = element.querySelector('.editor-item');
-      if (editorItem) {
-        const monacoContainer = editorItem.querySelector('.monaco-container');
-        if (monacoContainer) {
-          const editorId = monacoContainer.getAttribute('data-editor-id');
-          if (editorId && this.monaco) {
-            // Monaco instance will be tracked by state manager
-          }
-        }
+      const editorWithTerminal = this.editorWithTerminals.get(id);
+      if (editorWithTerminal) {
+        editorWithTerminal.dispose();
       }
 
-      // Remove resize handle
       this.resizeHandles.delete(id);
       this.editorWidths.delete(id);
+      this.editorWithTerminals.delete(id);
 
       element.remove();
       this.editorElements.delete(id);
@@ -248,22 +223,16 @@ export class EditorContainer {
   }
 
   createMonacoEditor(id: string, content: string, language: string = 'plaintext', theme: string = 'vs-dark'): any {
-    const element = this.editorElements.get(id);
-    if (!element || !this.monaco) return null;
+    const editorWithTerminal = this.editorWithTerminals.get(id);
+    if (!editorWithTerminal || !this.monaco) return null;
 
-    const editorItem = element.querySelector('.editor-item');
-    if (!editorItem) return null;
-
-    const monacoContainer = editorItem.querySelector('.monaco-container') as HTMLElement;
+    const monacoContainer = editorWithTerminal.getMonacoContainer();
     if (!monacoContainer) return null;
 
-    // Check if already has an editor
     if (monacoContainer.hasChildNodes()) {
-      // Return existing instance (or get from state manager)
       return null;
     }
 
-    // Create Monaco editor with plain text (no syntax highlighting)
     const editor = this.monaco.editor.create(monacoContainer, {
       value: content,
       language: 'plaintext',
@@ -277,14 +246,12 @@ export class EditorContainer {
       tabSize: 2,
     });
 
-    // Store editor ID for tracking
-    monacoContainer.setAttribute('data-editor-id', id);
-
-    // Listen for content changes
     editor.onDidChangeModelContent(() => {
       const newContent = editor.getValue();
       this.onContentChange(id, newContent);
     });
+
+    editorWithTerminal.setMonacoInstance(editor);
 
     return editor;
   }
@@ -303,14 +270,11 @@ export class EditorContainer {
       editorInstance.dispose();
     }
 
-    const element = this.editorElements.get(id);
-    if (element) {
-      const editorItem = element.querySelector('.editor-item');
-      if (editorItem) {
-        const monacoContainer = editorItem.querySelector('.monaco-container') as HTMLElement;
-        if (monacoContainer) {
-          monacoContainer.innerHTML = '';
-        }
+    const editorWithTerminal = this.editorWithTerminals.get(id);
+    if (editorWithTerminal) {
+      const monacoContainer = editorWithTerminal.getMonacoContainer();
+      if (monacoContainer) {
+        monacoContainer.innerHTML = '';
       }
     }
   }
@@ -326,20 +290,19 @@ export class EditorContainer {
     }
   }
 
-  /**
-   * Get the actual editor element (inside wrapper)
-   */
-  getEditorItemElement(id: string): HTMLElement | null {
-    const wrapper = this.editorElements.get(id);
-    if (wrapper) {
-      return wrapper.querySelector('.editor-item');
+  updateEditorTheme(id: string, theme: 'light' | 'dark'): void {
+    const editorWithTerminal = this.editorWithTerminals.get(id);
+    if (editorWithTerminal) {
+      editorWithTerminal.setTheme(theme);
     }
-    return null;
   }
 
-  /**
-   * Wait for Monaco to be loaded
-   */
+  updateAllEditorsTheme(theme: 'light' | 'dark'): void {
+    this.editorWithTerminals.forEach((editorWithTerminal) => {
+      editorWithTerminal.setTheme(theme);
+    });
+  }
+
   async waitForMonaco(): Promise<void> {
     await this.loadMonaco();
   }

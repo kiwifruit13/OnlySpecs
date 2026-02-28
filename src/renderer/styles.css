@@ -260,29 +260,43 @@ body {
 
 /* Editor Container Styles */
 .editor-container {
-  overflow-x: auto;
+  overflow-x: scroll;
   overflow-y: hidden;
   background: var(--bg-primary);
-  /* Height is controlled by SplitPane */
-  min-height: 100px;
+  flex: 1;
+  /* Take remaining height after toolbar and tab bar */
+  height: 0;
+  /* Important for scrollbar visibility */
+  position: relative;
 }
 
 .editor-container::-webkit-scrollbar {
-  height: 70px;
+  height: 24px;
 }
 
 .editor-container::-webkit-scrollbar-track {
-  background: var(--scrollbar-track);
+  background: var(--bg-secondary);
+  border-radius: 0;
+  border-top: 1px solid var(--border-color);
 }
 
 .editor-container::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
-  border-radius: 35px;
-  border: 15px solid var(--scrollbar-track);
+  border-radius: 0;
+  border: none;
+  min-width: 60px;
 }
 
 .editor-container::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
+}
+
+.editor-container::-webkit-scrollbar-thumb:active {
+  background: var(--accent-color);
+}
+
+.editor-container::-webkit-scrollbar-corner {
+  background: var(--bg-secondary);
 }
 
 .editors-wrapper {
@@ -290,24 +304,119 @@ body {
   flex-direction: row;
   height: 100%;
   align-items: stretch;
+  /* Ensure wrapper doesn't shrink to fit */
+  min-width: min-content;
 }
 
 .editor-wrapper {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: stretch;
   flex-shrink: 0;
   height: 100%;
+  position: relative;
+  min-width: 300px;
+}
+
+.editor-with-terminal {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.editor-section {
+  flex: 1;
+  min-height: 0;
+  border-right: 1px solid var(--border-color);
+  overflow: hidden;
   position: relative;
 }
 
 .editor-item {
   flex: 1;
   min-width: 0;
-  border-right: 1px solid var(--border-color);
   height: 100%;
   position: relative;
   overflow: hidden;
+}
+
+/* Terminal Toggle Button */
+.terminal-toggle-section {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
+  height: 28px;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.terminal-toggle-btn {
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  padding: 4px 8px;
+  margin: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.terminal-toggle-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.terminal-toggle-btn.active {
+  color: var(--accent-color);
+  background: var(--bg-tertiary);
+}
+
+.terminal-toggle-btn svg {
+  transition: transform 0.2s ease;
+}
+
+.terminal-toggle-btn span {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Terminal Section (per editor) */
+.terminal-section {
+  flex: 0 0 200px;
+  min-height: 150px;
+  max-height: 500px;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.terminal-section .terminal-container {
+  height: 100%;
+  border: none;
+}
+
+.terminal-section .terminal-header {
+  height: 28px;
+  padding: 4px 12px;
+  font-size: 11px;
+}
+
+.terminal-section .terminal-xterm {
+  flex: 1;
 }
 
 .monaco-container {
@@ -525,55 +634,6 @@ body {
 
 .terminal-xterm .xterm .xterm-viewport::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
-}
-
-/* Split Resize Handle */
-.split-resize-handle {
-  height: 8px;
-  background: var(--bg-secondary);
-  border-top: 1px solid var(--border-color);
-  border-bottom: 1px solid var(--border-color);
-  cursor: row-resize;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: background-color 0.15s;
-  position: relative;
-  z-index: 100;
-}
-
-.split-resize-handle:hover {
-  background: var(--tab-hover);
-}
-
-.split-resize-handle.active {
-  background: var(--accent-color);
-}
-
-.resize-handle-dots {
-  display: flex;
-  gap: 3px;
-  align-items: center;
-}
-
-.resize-handle-dots::before,
-.resize-handle-dots::after {
-  content: '';
-  width: 4px;
-  height: 4px;
-  background: var(--text-secondary);
-  border-radius: 50%;
-}
-
-.split-resize-handle:hover .resize-handle-dots::before,
-.split-resize-handle:hover .resize-handle-dots::after {
-  background: var(--accent-color);
-}
-
-.split-resize-handle.active .resize-handle-dots::before,
-.split-resize-handle.active .resize-handle-dots::after {
-  background: #ffffff;
 }
 
 
