@@ -38,6 +38,7 @@ class App {
       onContentChange: (id, content) => this.handleContentChange(id, content),
       themeManager: this.themeManager,
     });
+    this.editorContainer.setStateManager(this.stateManager);
 
     // Subscribe to state changes
     this.unsubscribe = this.stateManager.subscribe((editors) => {

@@ -306,16 +306,23 @@ body {
   align-items: stretch;
   /* Ensure wrapper doesn't shrink to fit */
   min-width: min-content;
+  /* Allow overflow for resize handles */
+  overflow: visible;
 }
 
 .editor-wrapper {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  flex-shrink: 0;
+  /* Use flex: none to respect explicit width */
+  flex: none;
   height: 100%;
   position: relative;
   min-width: 300px;
+  /* Ensure overflow is visible for the resize handle */
+  overflow: visible;
+  /* Add border to show boundaries */
+  border-right: 1px solid transparent;
 }
 
 .editor-with-terminal {
@@ -325,6 +332,78 @@ body {
   min-width: 0;
   height: 100%;
   overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+/* Compare Checkbox Section */
+.compare-section {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
+  height: 36px;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.compare-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border: 2px solid var(--accent-color);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.compare-checkbox:hover:not(:disabled) {
+  background: var(--bg-tertiary);
+  border-color: var(--accent-hover);
+}
+
+.compare-checkbox:checked {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+.compare-checkbox:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.compare-checkbox:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: var(--text-secondary);
+  background: var(--bg-tertiary);
+}
+
+.compare-checkbox-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.compare-checkbox:disabled + .compare-checkbox-label {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .editor-section {
@@ -432,19 +511,26 @@ body {
 }
 
 .resize-handle {
-  width: 8px;
-  flex-shrink: 0;
+  position: absolute;
+  right: -6px;
+  top: 0;
+  bottom: 0;
+  width: 12px;
   cursor: col-resize;
-  position: relative;
-  z-index: 5;
+  z-index: 1000;
   transition: background-color 0.15s;
   pointer-events: auto;
+  background: transparent;
+}
+
+.resize-handle:hover,
+.resize-handle:active {
+  background-color: rgba(0, 122, 204, 0.1);
 }
 
 .resize-handle:hover,
 .resize-handle:active {
   background-color: var(--accent-color);
-  z-index: 15;
 }
 
 .resize-handle::before {
@@ -455,14 +541,16 @@ body {
   transform: translate(-50%, -50%);
   width: 4px;
   height: 40px;
-  background-color: transparent;
+  background-color: var(--text-secondary);
   border-radius: 2px;
   transition: background-color 0.15s;
+  opacity: 0.5;
 }
 
 .resize-handle:hover::before,
 .resize-handle:active::before {
   background-color: var(--text-primary);
+  opacity: 1;
 }
 
 /* Rename Modal */

@@ -3,7 +3,10 @@ import { ThemeManager } from '../state/ThemeManager';
 
 export interface EditorWithTerminalOptions {
   onContentChange: (id: string, content: string) => void;
+  onCompareToggle: (id: string) => void;
   themeManager: ThemeManager;
+  isCompareDisabled: boolean;
+  isCompareSelected: boolean;
 }
 
 export class EditorWithTerminal {
@@ -12,10 +15,16 @@ export class EditorWithTerminal {
   private terminalContainer!: HTMLElement;
   private terminal: Terminal | null = null;
   private terminalToggle!: HTMLElement;
+  private compareCheckbox!: HTMLInputElement;
+  private compareLabel!: HTMLElement;
   private isTerminalExpanded: boolean = false;
   private onContentChange: (id: string, content: string) => void;
+  private onCompareToggle: (id: string) => void;
   private themeManager: ThemeManager;
   private monacoInstance: any = null;
+  private diffEditorInstance: any = null;
+  private originalEditorInstance: any = null;
+  private editorId: string = '';
 
   // Store terminal state
   private static terminalStates = new Map<string, boolean>();
@@ -28,18 +37,40 @@ export class EditorWithTerminal {
   ) {
     this.container = container;
     this.onContentChange = options.onContentChange;
+    this.onCompareToggle = options.onCompareToggle;
     this.themeManager = options.themeManager;
+    this.editorId = id;
 
     // Restore terminal state for this editor
     this.isTerminalExpanded = EditorWithTerminal.terminalStates.get(id) || false;
 
-    this.render(id, name);
+    this.render(id, name, options.isCompareDisabled, options.isCompareSelected);
     this.setupTerminalToggle(id);
+    this.setupCompareCheckbox(id);
   }
 
-  private render(id: string, name: string): void {
+  private render(id: string, name: string, isCompareDisabled: boolean, isCompareSelected: boolean): void {
     this.container.className = 'editor-with-terminal';
     this.container.innerHTML = '';
+
+    // Compare checkbox section (at the top)
+    const compareSection = document.createElement('div');
+    compareSection.className = 'compare-section';
+
+    this.compareCheckbox = document.createElement('input');
+    this.compareCheckbox.type = 'checkbox';
+    this.compareCheckbox.className = 'compare-checkbox';
+    this.compareCheckbox.id = `compare-${id}`;
+    this.compareCheckbox.checked = isCompareSelected;
+    this.compareCheckbox.disabled = isCompareDisabled;
+
+    this.compareLabel = document.createElement('label');
+    this.compareLabel.className = 'compare-checkbox-label';
+    (this.compareLabel as HTMLLabelElement).htmlFor = `compare-${id}`;
+    this.compareLabel.textContent = 'Compare';
+
+    compareSection.appendChild(this.compareCheckbox);
+    compareSection.appendChild(this.compareLabel);
 
     // Editor section
     this.editorElement = document.createElement('div');
@@ -73,6 +104,7 @@ export class EditorWithTerminal {
     this.terminalContainer.style.display = this.isTerminalExpanded ? 'flex' : 'none';
 
     // Assemble
+    this.container.appendChild(compareSection);
     this.container.appendChild(this.editorElement);
     this.container.appendChild(toggleSection);
     this.container.appendChild(this.terminalContainer);
@@ -81,6 +113,12 @@ export class EditorWithTerminal {
   private setupTerminalToggle(id: string): void {
     this.terminalToggle.addEventListener('click', () => {
       this.toggleTerminal(id);
+    });
+  }
+
+  private setupCompareCheckbox(id: string): void {
+    this.compareCheckbox.addEventListener('change', () => {
+      this.onCompareToggle(id);
     });
   }
 
@@ -118,6 +156,15 @@ export class EditorWithTerminal {
     window.dispatchEvent(new Event('resize'));
   }
 
+  updateCompareState(isDisabled: boolean, isSelected: boolean): void {
+    this.compareCheckbox.disabled = isDisabled;
+    this.compareCheckbox.checked = isSelected;
+  }
+
+  getContainer(): HTMLElement {
+    return this.container;
+  }
+
   getMonacoContainer(): HTMLElement {
     return this.editorElement.querySelector('.monaco-container') as HTMLElement;
   }
@@ -130,6 +177,26 @@ export class EditorWithTerminal {
     return this.monacoInstance;
   }
 
+  setDiffEditorInstance(instance: any): void {
+    this.diffEditorInstance = instance;
+  }
+
+  getDiffEditorInstance(): any {
+    return this.diffEditorInstance;
+  }
+
+  setOriginalEditorInstance(instance: any): void {
+    this.originalEditorInstance = instance;
+  }
+
+  getOriginalEditorInstance(): any {
+    return this.originalEditorInstance;
+  }
+
+  getEditorId(): string {
+    return this.editorId;
+  }
+
   setTheme(theme: 'light' | 'dark'): void {
     if (this.terminal) {
       this.terminal.setTheme(theme);
@@ -137,6 +204,14 @@ export class EditorWithTerminal {
   }
 
   dispose(): void {
+    if (this.diffEditorInstance) {
+      this.diffEditorInstance.dispose();
+      this.diffEditorInstance = null;
+    }
+    if (this.monacoInstance) {
+      this.monacoInstance.dispose();
+      this.monacoInstance = null;
+    }
     if (this.terminal) {
       this.terminal.dispose();
       this.terminal = null;
