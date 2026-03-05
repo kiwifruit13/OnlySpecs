@@ -10,6 +10,9 @@ export class EditorContainer {
   private container: HTMLElement;
   private editorsWrapper!: HTMLElement;
   private onContentChange: (id: string, content: string) => void;
+  private onGenerateFromSpecs?: (id: string) => void;
+  private onReviewAndTest?: (id: string) => void;
+  private onModifySpecsDoc?: (id: string) => void;
   private themeManager: ThemeManager;
   private editorElements: Map<string, HTMLElement> = new Map();
   private editorWithTerminals: Map<string, EditorWithTerminal> = new Map();
@@ -40,12 +43,18 @@ export class EditorContainer {
     container: HTMLElement,
     options: {
       onContentChange: (id: string, content: string) => void;
+      onGenerateFromSpecs?: (id: string) => void;
+      onReviewAndTest?: (id: string) => void;
+      onModifySpecsDoc?: (id: string) => void;
       themeManager: ThemeManager;
     }
   ) {
     this.container = container;
     this.onContentChange = options.onContentChange;
     this.themeManager = options.themeManager;
+    this.onGenerateFromSpecs = options.onGenerateFromSpecs;
+    this.onReviewAndTest = options.onReviewAndTest;
+    this.onModifySpecsDoc = options.onModifySpecsDoc;
 
     this.render();
     this.loadMonaco();
@@ -461,6 +470,9 @@ export class EditorContainer {
         onContentChange: this.onContentChange,
         onCompareToggle: (id) => this.handleCompareToggle(id),
         onPreviewToggle: (id) => this.handlePreviewToggle(id),
+        onGenerateFromSpecs: this.onGenerateFromSpecs,
+        onReviewAndTest: this.onReviewAndTest,
+        onModifySpecsDoc: this.onModifySpecsDoc,
         themeManager: this.themeManager,
         isCompareDisabled: isCompareDisabled,
         isCompareSelected: isSelected,

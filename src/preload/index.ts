@@ -80,7 +80,39 @@ const electronAPI = {
   // Read file content
   readFile: (filePath: string): Promise<{ success: boolean; content?: string; error?: string }> =>
     ipcRenderer.invoke('fs:readFile', filePath),
+
+  // Select directory
+  selectDirectory: (): Promise<{ success: boolean; path?: string; error?: string }> =>
+    ipcRenderer.invoke('fs:selectDirectory'),
+
+  // Read directory
+  readDirectory: (dirPath: string): Promise<{ success: boolean; entries?: Array<{ name: string; path: string; isDirectory: boolean }>; error?: string }> =>
+    ipcRenderer.invoke('fs:readDirectory', dirPath),
 };
+
+export interface ElectronAPIType {
+  loadAllEditors(): Promise<EditorData[]>;
+  saveEditor(editor: EditorData): Promise<void>;
+  saveAllEditors(editors: EditorData[]): Promise<void>;
+  renameEditor(id: string, newName: string): Promise<void>;
+  deleteEditor(id: string): Promise<void>;
+  saveOrder(order: string[]): Promise<void>;
+  getNextIndex(): Promise<number>;
+  incrementNextIndex(): Promise<number>;
+  createTerminal(sessionId: string, cwd?: string): Promise<{ pid: number }>;
+  writeTerminal(sessionId: string, data: string): Promise<void>;
+  resizeTerminal(sessionId: string, cols: number, rows: number): Promise<void>;
+  killTerminal(sessionId: string): Promise<void>;
+  onTerminalData(sessionId: string, callback: (data: string) => void): () => void;
+  onTerminalExit(sessionId: string, callback: (exitCode: number, signal: number) => void): () => void;
+  importGithubRepo(repoUrl: string, summarizeSpecs: string): Promise<{ success: boolean; repoPath?: string; instructionsPath?: string; output?: string; error?: string }>;
+  onGithubProgress(callback: (message: string) => void): () => void;
+  loadConfig(): Promise<{ apiKey: string; baseUrl: string }>;
+  saveConfig(config: { apiKey: string; baseUrl: string }): Promise<void>;
+  readFile(filePath: string): Promise<{ success: boolean; content?: string; error?: string }>;
+  selectDirectory(): Promise<{ success: boolean; path?: string; error?: string }>;
+  readDirectory(dirPath: string): Promise<{ success: boolean; entries?: Array<{ name: string; path: string; isDirectory: boolean }>; error?: string }>;
+}
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
 

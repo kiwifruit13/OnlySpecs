@@ -16,7 +16,7 @@ export default defineConfig({
       external: ['electron', 'node-pty'],
     },
   },
-  optimizeDeps: {
-    exclude: ['node-pty'],
-  },
+  // optimizeDeps: {
+  //   exclude: ['node-pty'],
+  // },
 });

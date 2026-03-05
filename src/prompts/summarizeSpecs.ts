@@ -1,5 +1,13 @@
 export const summarizeSpecs = `
 
+Please read the repository at this directory. It's a software project. Your role is to analyze the project and summarize the specifications of the project. The specifications should be in a markdown format.
+
+The target of the specifications is to provide a VERY VERY detailed and informative description of the project, including its features, functionalities, and requirements. The specifications should be comprehensive and cover all aspects of the project, such as user interface, project management, and any other relevant components. 
+
+You need to create a file called "output_specs.md" in the root directory of the project, and write the specifications in that file. 
+
+User will use the specifications version v1 to understand the project and its requirements, modify the project, and do code implementation or code refactoring in version v2. So please follow the instructions below to write the specifications:
+
 🧠 MASTER ARCHITECTURE ANALYSIS & DESIGN PROMPT
 
 You are an expert systems architect, distributed systems engineer, and software design researcher.

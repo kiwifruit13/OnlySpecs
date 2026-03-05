@@ -4,10 +4,29 @@ import { VitePlugin } from '@electron-forge/plugin-vite';
 
 export default {
   packagerConfig: {
-    asar: true,
-    asarUnpack: '**/node_modules/@anthropic-ai/**',
+    asar: {
+      // `node-pty` loads native binaries and helper executables from prebuilds.
+      // Keep this directory outside app.asar so the native module can load/run.
+      unpackDir: 'node_modules/node-pty',
+    },
+    // The Vite plugin's default ignore filter keeps only `/.vite`, which drops
+    // externalized runtime dependencies like `node-pty`.
+    ignore: (file) => {
+      if (!file) return false;
+      return !(
+        file === '/.vite' ||
+        file.startsWith('/.vite/') ||
+        file === '/node_modules' ||
+        file === '/node_modules/node-pty' ||
+        file.startsWith('/node_modules/node-pty/') ||
+        file === '/node_modules/node-addon-api' ||
+        file.startsWith('/node_modules/node-addon-api/')
+      );
+    },
   },
-  rebuildConfig: {},
+  rebuildConfig: {
+    onlyModules: ['node-pty'],
+  },
   makers: [
     {
       name: '@electron-forge/maker-zip',
@@ -66,7 +85,7 @@ export default {
       [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
       [FuseV1Options.EnableNodeCliInspectArguments]: false,
       [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
-      [FuseV1Options.OnlyLoadAppFromAsar]: true,
+      [FuseV1Options.OnlyLoadAppFromAsar]: false,
     }),
   ],
 };

@@ -35,6 +35,10 @@ export class Toolbar {
     const controls = document.createElement('div');
     controls.className = 'toolbar-controls';
 
+    // Create New Project button
+    const newProjectBtn = this.createNewProjectBtn();
+    controls.appendChild(newProjectBtn);
+
     // Get Specs button
     const getSpecsBtn = this.createGetSpecsBtn();
     controls.appendChild(getSpecsBtn);
@@ -48,6 +52,27 @@ export class Toolbar {
     controls.appendChild(this.themeToggleBtn);
 
     this.container.appendChild(controls);
+  }
+
+  private createNewProjectBtn(): HTMLElement {
+    const btn = document.createElement('button');
+    btn.className = 'new-project-btn';
+    btn.textContent = 'Create a new project';
+    btn.title = 'Create a new project';
+
+    // Plus icon
+    const icon = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;">
+      <line x1="12" y1="5" x2="12" y2="19"/>
+      <line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>`;
+
+    btn.innerHTML = icon + 'Create a new project';
+
+    btn.addEventListener('click', () => {
+      // TODO: Implement create new project functionality
+    });
+
+    return btn;
   }
 
   private createGetSpecsBtn(): HTMLElement {

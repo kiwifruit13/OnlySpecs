@@ -13,8 +13,10 @@ export class Modal {
   private overlay!: HTMLElement;
   private dialog!: HTMLElement;
   private isOpen: boolean = false;
+  private onCancel?: () => void;
 
   constructor(options: ModalOptions) {
+    this.onCancel = options.onCancel;
     this.create(options);
   }
 
@@ -42,7 +44,10 @@ export class Modal {
     closeBtn.className = 'modal-close-btn';
     closeBtn.innerHTML = '&times;';
     closeBtn.title = 'Close';
-    closeBtn.addEventListener('click', () => this.close());
+    closeBtn.addEventListener('click', () => {
+      if (options.onCancel) options.onCancel();
+      this.close();
+    });
 
     header.appendChild(title);
     header.appendChild(closeBtn);
@@ -106,6 +111,7 @@ export class Modal {
 
   private handleKeyDown = (e: KeyboardEvent): void => {
     if (e.key === 'Escape' && this.isOpen) {
+      if (this.onCancel) this.onCancel();
       this.close();
     }
   };

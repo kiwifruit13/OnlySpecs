@@ -61,11 +61,13 @@ export class Terminal {
   private unsubscribeData?: () => void;
   private unsubscribeExit?: () => void;
   private currentTheme: 'light' | 'dark' = 'dark';
+  private showHeader: boolean;
 
-  constructor(container: HTMLElement, theme: 'light' | 'dark' = 'dark') {
+  constructor(container: HTMLElement, theme: 'light' | 'dark' = 'dark', showHeader: boolean = true) {
     this.container = container;
     this.sessionId = `terminal-${Date.now()}-${Math.random()}`;
     this.currentTheme = theme;
+    this.showHeader = showHeader;
 
     this.xterm = new XTerminal({
       allowProposedApi: true,
@@ -94,12 +96,19 @@ export class Terminal {
 
   private render(): void {
     this.container.className = 'terminal-container';
-    this.container.innerHTML = `
-      <div class="terminal-header">
-        <span class="terminal-title">Terminal</span>
-      </div>
-      <div class="terminal-xterm" id="terminal-xterm"></div>
-    `;
+
+    if (this.showHeader) {
+      this.container.innerHTML = `
+        <div class="terminal-header">
+          <span class="terminal-title">Terminal</span>
+        </div>
+        <div class="terminal-xterm" id="terminal-xterm"></div>
+      `;
+    } else {
+      this.container.innerHTML = `
+        <div class="terminal-xterm" id="terminal-xterm"></div>
+      `;
+    }
 
     const xtermContainer = this.container.querySelector('#terminal-xterm')!;
     this.xterm.open(xtermContainer as HTMLElement);

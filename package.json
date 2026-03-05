@@ -14,7 +14,8 @@
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
     "test": "npx tsx tests/claude-sdk.test.ts",
-    "test:mock": "npx tsx tests/claude-sdk.test.ts --mock"
+    "test:mock": "npx tsx tests/claude-sdk.test.ts --mock",
+    "postinstall": "electron-rebuild -f -w node-pty"
   },
   "keywords": [
     "electron",
@@ -32,6 +33,7 @@
     "@electron-forge/plugin-fuses": "^7.4.0",
     "@electron-forge/plugin-vite": "^7.4.0",
     "@electron/fuses": "^1.8.0",
+    "@electron/rebuild": "^3.7.2",
     "@types/node": "^20.12.0",
     "electron": "^30.0.0",
     "tsx": "^4.19.0",

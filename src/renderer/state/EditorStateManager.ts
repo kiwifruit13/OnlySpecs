@@ -11,16 +11,6 @@ export interface EditorState {
 
 declare global {
   interface Window {
-    electronAPI: {
-      loadAllEditors: () => Promise<EditorData[]>;
-      saveEditor: (editor: EditorData) => Promise<void>;
-      saveAllEditors: (editors: EditorData[]) => Promise<void>;
-      renameEditor: (id: string, newName: string) => Promise<void>;
-      deleteEditor: (id: string) => Promise<void>;
-      saveOrder: (order: string[]) => Promise<void>;
-      getNextIndex: () => Promise<number>;
-      incrementNextIndex: () => Promise<number>;
-    };
     monaco: any;
   }
 }
@@ -90,7 +80,8 @@ export class EditorStateManager {
       isDirty: true,
     };
 
-    this.editors.push(newEditor);
+    // Add to the beginning (left side) instead of end (right side)
+    this.editors.unshift(newEditor);
     this.notifyListeners();
 
     // Auto-save new editor

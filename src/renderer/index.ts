@@ -4,6 +4,8 @@ import { EditorContainer } from './components/EditorContainer';
 import { Modal } from './components/Modal';
 import { SettingsModal } from './components/SettingsModal';
 import { Terminal } from './components/Terminal';
+import { FileExplorer } from './components/FileExplorer';
+import { ResizablePanel } from './components/ResizablePanel';
 import { EditorStateManager, EditorState } from './state/EditorStateManager';
 import { ThemeManager } from './state/ThemeManager';
 import { SettingsManager } from './state/SettingsManager';
@@ -16,6 +18,8 @@ class App {
   private toolbar: Toolbar;
   private tabBar: TabBar;
   private editorContainer: EditorContainer;
+  private fileExplorer: FileExplorer | null = null;
+  private resizablePanel: ResizablePanel | null = null;
   private settingsModal: SettingsModal | null = null;
   private unsubscribe: () => void;
   private themeUnsubscribe: () => void;
@@ -39,9 +43,23 @@ class App {
     );
 
     // Initialize UI components
+    const fileExplorerContainer = document.getElementById('file-explorer')!;
+    const fileExplorerResizeHandle = document.getElementById('file-explorer-resize-handle')!;
     const toolbarContainer = document.getElementById('toolbar')!;
     const tabBarContainer = document.getElementById('tab-bar')!;
     const editorContainerElement = document.getElementById('editor-container')!;
+
+    // Initialize File Explorer
+    this.fileExplorer = new FileExplorer(fileExplorerContainer, {
+      onFileSelect: (filePath) => this.handleFileSelect(filePath),
+      themeManager: this.themeManager,
+    });
+
+    // Initialize Resizable Panel
+    this.resizablePanel = new ResizablePanel(
+      fileExplorerContainer,
+      fileExplorerResizeHandle
+    );
 
     this.toolbar = new Toolbar(toolbarContainer, {
       onToggleTheme: () => this.handleToggleTheme(),
@@ -59,6 +77,9 @@ class App {
 
     this.editorContainer = new EditorContainer(editorContainerElement, {
       onContentChange: (id, content) => this.handleContentChange(id, content),
+      onGenerateFromSpecs: (id) => this.handleGenerateFromSpecs(id),
+      onReviewAndTest: (id) => this.handleReviewAndTest(id),
+      onModifySpecsDoc: (id) => this.handleModifySpecsDoc(id),
       themeManager: this.themeManager,
     });
     this.editorContainer.setStateManager(this.stateManager);
@@ -211,6 +232,44 @@ class App {
 
   private handleRename(id: string, newName: string): void {
     this.stateManager.renameEditor(id, newName);
+  }
+
+  private handleGenerateFromSpecs(id: string): void {
+    console.log('[App] Generate from Specs for editor:', id);
+    // TODO: Implement generate from specs functionality
+    // This could open a modal or trigger a Claude prompt
+    alert('Generate from Specs functionality will be implemented here.\n\nEditor ID: ' + id);
+  }
+
+  private handleReviewAndTest(id: string): void {
+    console.log('[App] Review and Test for editor:', id);
+    // TODO: Implement review and test functionality
+    // This could run tests, review code, etc.
+    alert('Review and Test functionality will be implemented here.\n\nEditor ID: ' + id);
+  }
+
+  private handleModifySpecsDoc(id: string): void {
+    console.log('[App] Modify Specs Doc for editor:', id);
+    // TODO: Implement modify specs doc functionality
+    // This could open a modal to edit the specs document
+    alert('Modify Specs Doc functionality will be implemented here.\n\nEditor ID: ' + id);
+  }
+
+  private async handleFileSelect(filePath: string): Promise<void> {
+    if (!window.electronAPI) {
+      console.error('[App] electronAPI not available');
+      return;
+    }
+
+    const result = await window.electronAPI.readFile(filePath);
+    if (result.success && result.content !== undefined) {
+      // Create a new editor with the file content
+      const fileName = filePath.split('/').pop() || filePath;
+      const newEditor = await this.stateManager.createEditor(fileName);
+      this.stateManager.updateEditorContent(newEditor.id, result.content);
+    } else {
+      console.error('[App] Failed to read file:', result.error);
+    }
   }
 
   private handleContentChange(id: string, content: string): void {
@@ -613,7 +672,7 @@ class App {
         // Wait a bit for terminal to initialize, then send commands
         setTimeout(async () => {
           // CD to the repo directory and run claude, then exit automatically
-          const commands = `cd "${result.repoPath}" && claude --dangerously-skip-permissions -p "please read the task doc at summarize_specs_instructions.md and output the final markdown doc. do not ask any questions, do the task in headless mode" && exit\r`;
+          const commands = `cd "${result.repoPath}" && claude --dangerously-skip-permissions -p "please read the task doc at summarize_specs_instructions.md and output the final markdown doc. do not ask any questions, do the task in headless mode." && exit\r`;
           if (window.electronAPI) {
             await window.electronAPI.writeTerminal(this.githubImportTerminal!.sessionId, commands);
           }

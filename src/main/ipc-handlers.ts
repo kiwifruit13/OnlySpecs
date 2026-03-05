@@ -1,8 +1,13 @@
-import { ipcMain } from 'electron';
-import * as pty from 'node-pty';
+import { ipcMain, dialog } from 'electron';
+import { createRequire } from 'module';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
+import type { IPty } from 'node-pty';
+
+const require = createRequire(import.meta.url);
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const pty = require('node-pty') as typeof import('node-pty');
 
 export interface EditorData {
   id: string;
@@ -200,7 +205,7 @@ export function registerIpcHandlers() {
   });
 
   // PTY Terminal management
-  const ptySessions = new Map<string, pty.IPty>();
+  const ptySessions = new Map<string, IPty>();
 
   // Create a new PTY session
   ipcMain.handle('terminal:create', async (_event, sessionId: string, cwd?: string): Promise<{ pid: number }> => {
@@ -432,6 +437,61 @@ export function registerIpcHandlers() {
     } catch (error: any) {
       console.error('[FS] Error reading file:', error);
       return { success: false, error: error.message || 'Failed to read file' };
+    }
+  });
+
+  // Select directory
+  ipcMain.handle('fs:selectDirectory', async (): Promise<{ success: boolean; path?: string; error?: string }> => {
+    try {
+      const result = await dialog.showOpenDialog({
+        properties: ['openDirectory', 'createDirectory'],
+        title: 'Select a folder to explore'
+      });
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return { success: false, error: 'No directory selected' };
+      }
+
+      return { success: true, path: result.filePaths[0] };
+    } catch (error: any) {
+      console.error('[FS] Error selecting directory:', error);
+      return { success: false, error: error.message || 'Failed to select directory' };
+    }
+  });
+
+  // Read directory
+  ipcMain.handle('fs:readDirectory', async (_event, dirPath: string): Promise<{ success: boolean; entries?: Array<{ name: string; path: string; isDirectory: boolean }>; error?: string }> => {
+    try {
+      const entries: Array<{ name: string; path: string; isDirectory: boolean }> = [];
+
+      const items = await fs.readdir(dirPath, { withFileTypes: true });
+
+      for (const item of items) {
+        // Skip hidden files and directories
+        if (item.name.startsWith('.')) {
+          continue;
+        }
+
+        const fullPath = path.join(dirPath, item.name);
+        entries.push({
+          name: item.name,
+          path: fullPath,
+          isDirectory: item.isDirectory()
+        });
+      }
+
+      // Sort: directories first, then files, both alphabetically
+      entries.sort((a, b) => {
+        if (a.isDirectory !== b.isDirectory) {
+          return a.isDirectory ? -1 : 1;
+        }
+        return a.name.localeCompare(b.name);
+      });
+
+      return { success: true, entries };
+    } catch (error: any) {
+      console.error('[FS] Error reading directory:', error);
+      return { success: false, error: error.message || 'Failed to read directory' };
     }
   });
 }
