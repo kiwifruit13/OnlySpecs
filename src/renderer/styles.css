@@ -960,6 +960,13 @@ body {
   border: none;
 }
 
+.terminal-item .terminal-container {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  border-top: none;
+}
+
 .terminal-section .terminal-header {
   height: 28px;
   padding: 4px 12px;
@@ -1816,4 +1823,3 @@ body {
 .file-tree-item.active .file-icon-default {
   color: white;
 }
-

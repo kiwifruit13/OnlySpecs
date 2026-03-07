@@ -34,6 +34,7 @@ export class EditorContainer {
     console.log('[Preview] Toggle preview for', id);
   };
   private diffModels: Map<string, { original: any; modified: any }> = new Map();
+  private cwd: string | undefined;
 
   setStateManager(stateManager: any): void {
     this.stateManager = stateManager;
@@ -477,6 +478,7 @@ export class EditorContainer {
         isCompareDisabled: isCompareDisabled,
         isCompareSelected: isSelected,
         isPreviewSelected: isPreviewSelected,
+        cwd: this.cwd,
       }
     );
 
@@ -695,5 +697,12 @@ export class EditorContainer {
 
   async waitForMonaco(): Promise<void> {
     await this.loadMonaco();
+  }
+
+  setCwd(cwd: string): void {
+    this.cwd = cwd;
+    this.editorWithTerminals.forEach((editorWithTerminal) => {
+      editorWithTerminal.setCwd(cwd);
+    });
   }
 }

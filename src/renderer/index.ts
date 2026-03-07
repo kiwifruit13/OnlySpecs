@@ -57,6 +57,8 @@ class App {
       onFileDelete: (filePath) => this.handleFileDelete(filePath),
       onRootChange: (rootPath) => {
         this.projectRoot = rootPath;
+        // Update cwd for all editor terminals
+        this.editorContainer.setCwd(rootPath);
         // Auto-save the project path when it changes
         this.settingsManager.setLastProjectPath(rootPath).catch(err => {
           console.error('[App] Failed to save project path:', err);
@@ -165,6 +167,8 @@ class App {
         console.log('[App] Restoring last project:', lastPath);
         await this.fileExplorer.loadProjectRoot(lastPath);
         this.projectRoot = lastPath;
+        // Update cwd for all editor terminals
+        this.editorContainer.setCwd(lastPath);
       } else {
         // Path doesn't exist, clear it from config
         console.log('[App] Last project path no longer exists, clearing:', lastPath);
@@ -410,7 +414,7 @@ class App {
     editorWithTerminal.setCwd(this.projectRoot);
 
     // Build the command (cwd is set via setCwd, so no need for cd)
-    const command = `claude --dangerously-skip-permissions -p "Please read the ${specsFileName} file and generate the implementation code for it at ${codeFolderPath}, then save the code in the ${codeFolderName}. DO NOT ASK ANY QUESTIONS, JUST OUTPUT THE CODE" && exit`;
+    const command = `claude --dangerously-skip-permissions -p "Please read the ${specsFileName} file and generate the implementation code for it at ${codeFolderPath}, then save the code in the ${codeFolderName}. Do not leave any blank and implement all codes, test, docs and readme. Do not ask any questions to user. Do the task in headless mode. If any decisions need to be made, make them autonomously and DO NOT ASK USER. When the task is done, exit immediately."`;
 
     console.log('[App] Running command:', command);
 
@@ -953,7 +957,7 @@ class App {
         // Wait a bit for terminal to initialize, then send commands
         setTimeout(async () => {
           // CD to the repo directory and run claude, then exit automatically
-          const commands = `cd "${result.repoPath}" && claude --dangerously-skip-permissions -p "please read the task doc at summarize_specs_instructions.md and output the final markdown doc. do not ask any questions, do the task in headless mode." && exit\r`;
+          const commands = `cd "${result.repoPath}" && claude --dangerously-skip-permissions -p "please read the task doc at summarize_specs_instructions.md and output the final markdown doc. Do not ask any questions. Do the task in headless mode. When the task is done, exit immediately." && exit\r`;
           if (window.electronAPI) {
             await window.electronAPI.writeTerminal(this.githubImportTerminal!.sessionId, commands);
           }

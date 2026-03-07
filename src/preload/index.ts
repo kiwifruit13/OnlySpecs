@@ -102,6 +102,10 @@ const electronAPI = {
   deleteFile: (filePath: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke('fs:deleteFile', filePath),
 
+  // Delete folder recursively
+  deleteFolder: (folderPath: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('fs:deleteFolder', folderPath),
+
   // Create directory
   createDirectory: (dirPath: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke('fs:createDirectory', dirPath),
@@ -136,6 +140,7 @@ export interface ElectronAPIType {
   readDirectory(dirPath: string): Promise<{ success: boolean; entries?: Array<{ name: string; path: string; isDirectory: boolean }>; error?: string }>;
   createProject(): Promise<{ success: boolean; projectPath?: string; error?: string }>;
   deleteFile(filePath: string): Promise<{ success: boolean; error?: string }>;
+  deleteFolder(folderPath: string): Promise<{ success: boolean; error?: string }>;
   createDirectory(dirPath: string): Promise<{ success: boolean; error?: string }>;
   pathExists(path: string): Promise<{ exists: boolean }>;
 }

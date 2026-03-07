@@ -13,6 +13,7 @@ export interface EditorWithTerminalOptions {
   isCompareDisabled: boolean;
   isCompareSelected: boolean;
   isPreviewSelected: boolean;
+  cwd?: string;
 }
 
 interface TerminalInstance {
@@ -103,8 +104,13 @@ export class EditorWithTerminal {
     this.themeManager = options.themeManager;
     this.editorId = id;
 
-    // Restore terminal state for this editor, default to expanded (true) for new editors
-    this.isTerminalExpanded = EditorWithTerminal.terminalStates.get(id) ?? true;
+    // Set cwd from options if provided
+    if (options.cwd) {
+      this.cwd = options.cwd;
+    }
+
+    // Restore terminal state for this editor, default to collapsed (false) for new editors
+    this.isTerminalExpanded = EditorWithTerminal.terminalStates.get(id) ?? false;
     this.isPreviewMode = options.isPreviewSelected || false;
 
     // Restore preview width state
@@ -395,6 +401,12 @@ export class EditorWithTerminal {
 
   private setTerminalHeight(height: number): void {
     this.terminalsContainer.style.height = `${height}px`;
+    // Fit all terminals after resize
+    setTimeout(() => {
+      this.terminals.forEach((terminalInstance) => {
+        terminalInstance.terminal.fit();
+      });
+    }, 10);
   }
 
   private toggleTerminalsPanel(id: string): void {
@@ -590,7 +602,6 @@ export class EditorWithTerminal {
 
   private addNewTerminal(cwd?: string): void {
     const terminalId = this.generateTerminalId();
-    const sessionId = `terminal-${terminalId}`;
 
     // Use provided cwd or fallback to stored cwd
     const terminalCwd = cwd || this.cwd;
@@ -630,13 +641,13 @@ export class EditorWithTerminal {
     this.terminalsWrapper.appendChild(terminalContainer);
 
     // Create terminal instance (without header since we have our own)
-    const terminal = new Terminal(terminalContent, this.themeManager.getCurrentTheme(), false, this.cwd);
+    const terminal = new Terminal(terminalContent, this.themeManager.getCurrentTheme(), false, terminalCwd);
 
     // Store terminal instance
     this.terminals.set(terminalId, {
       terminal,
       container: terminalContainer,
-      sessionId,
+      sessionId: terminal.sessionId,
       id: terminalId
     });
 
@@ -748,7 +759,7 @@ export class EditorWithTerminal {
     if (!this.isTerminalExpanded) {
       this.isTerminalExpanded = true;
       EditorWithTerminal.terminalStates.set(this.editorId, true);
-      this.terminalsContainer.style.display = 'block';
+      this.terminalsContainer.style.display = 'flex';
       this.terminalResizeHandle.style.display = 'block';
       this.addTerminalBtn.style.display = 'flex';
       this.terminalToggle.classList.add('active');
@@ -762,6 +773,8 @@ export class EditorWithTerminal {
     // Get the newly created terminal (last in the map)
     const newTerminal = Array.from(this.terminals.values()).pop();
     if (newTerminal && window.electronAPI) {
+      await newTerminal.terminal.waitUntilReady();
+      await newTerminal.terminal.waitUntilPromptReady();
       // Focus the terminal
       newTerminal.terminal.focus();
       // Write the command to the terminal

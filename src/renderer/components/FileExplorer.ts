@@ -195,9 +195,10 @@ export class FileExplorer {
         </svg>`
       : '<span class="chevron-placeholder"></span>';
 
-    // Add delete icon for specs files
-    const deleteIcon = !entry.isDirectory && this.isSpecsFile(entry.name)
-      ? `<button class="file-delete-btn" title="Delete file" data-path="${this.escapeHtml(entry.path)}">
+    // Add delete icon for specs files and folders
+    const showDeleteIcon = entry.isDirectory || this.isSpecsFile(entry.name);
+    const deleteIcon = showDeleteIcon
+      ? `<button class="file-delete-btn" title="${entry.isDirectory ? 'Delete folder' : 'Delete file'}" data-path="${this.escapeHtml(entry.path)}" data-is-directory="${entry.isDirectory}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="3,6 5,6 21,6"/>
             <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2v2"/>
@@ -281,21 +282,27 @@ export class FileExplorer {
       });
     });
 
-    // Delete button for specs files
+    // Delete button for specs files and folders
     container.querySelectorAll('.file-delete-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const filePath = (btn as HTMLElement).dataset.path;
+        const isDirectory = (btn as HTMLElement).dataset.isDirectory === 'true';
         if (filePath) {
-          this.handleDeleteFile(filePath);
+          this.handleDelete(filePath, isDirectory);
         }
       });
     });
   }
 
-  private async handleDeleteFile(filePath: string): Promise<void> {
+  private async handleDelete(filePath: string, isDirectory: boolean): Promise<void> {
     const fileName = filePath.split('/').pop() || filePath;
-    const confirmed = confirm(`Are you sure you want to delete "${fileName}"?\n\nThis will permanently delete the file from the folder.`);
+    const itemType = isDirectory ? 'folder' : 'file';
+    const warningText = isDirectory
+      ? `\n\nThis will permanently delete the folder and all files inside it.`
+      : `\n\nThis will permanently delete the file from the folder.`;
+
+    const confirmed = confirm(`Are you sure you want to delete "${fileName}"?${warningText}`);
 
     if (!confirmed) return;
 
@@ -304,7 +311,13 @@ export class FileExplorer {
       return;
     }
 
-    const result = await window.electronAPI.deleteFile(filePath);
+    let result;
+    if (isDirectory) {
+      result = await window.electronAPI.deleteFolder(filePath);
+    } else {
+      result = await window.electronAPI.deleteFile(filePath);
+    }
+
     if (result.success) {
       // Notify parent about the deletion
       if (this.onFileDelete) {
@@ -313,7 +326,7 @@ export class FileExplorer {
       // Refresh the file tree
       await this.refresh();
     } else {
-      alert(`Failed to delete file: ${result.error || 'Unknown error'}`);
+      alert(`Failed to delete ${itemType}: ${result.error || 'Unknown error'}`);
     }
   }
 

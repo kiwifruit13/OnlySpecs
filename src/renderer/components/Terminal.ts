@@ -63,6 +63,10 @@ export class Terminal {
   private currentTheme: 'light' | 'dark' = 'dark';
   private showHeader: boolean;
   private cwd?: string;
+  private startPromise: Promise<void>;
+  private promptReadyPromise: Promise<void>;
+  private resolvePromptReady?: () => void;
+  private hasPromptData = false;
 
   constructor(container: HTMLElement, theme: 'light' | 'dark' = 'dark', showHeader: boolean = true, cwd?: string) {
     this.container = container;
@@ -93,11 +97,16 @@ export class Terminal {
 
     this.render();
     this.setupEventListeners();
-    this.startTerminal();
+    this.promptReadyPromise = new Promise<void>((resolve) => {
+      this.resolvePromptReady = resolve;
+    });
+    this.startPromise = this.startTerminal();
   }
 
   private render(): void {
-    this.container.className = 'terminal-container';
+    // Preserve existing layout classes from parent container (e.g. terminal-item-content)
+    // and add terminal styling class on top.
+    this.container.classList.add('terminal-container');
 
     if (this.showHeader) {
       this.container.innerHTML = `
@@ -146,6 +155,11 @@ export class Terminal {
       this.unsubscribeData = window.electronAPI.onTerminalData(this.sessionId, (data) => {
         if (!this.isDisposed) {
           this.xterm.write(data);
+          if (!this.hasPromptData) {
+            this.hasPromptData = true;
+            this.resolvePromptReady?.();
+            this.resolvePromptReady = undefined;
+          }
         }
       });
 
@@ -159,13 +173,32 @@ export class Terminal {
 
       // Initial fit
       setTimeout(() => this.fit(), 100);
+
+      // Fallback in case shell prompt output is delayed/suppressed.
+      setTimeout(() => {
+        if (!this.hasPromptData) {
+          this.hasPromptData = true;
+          this.resolvePromptReady?.();
+          this.resolvePromptReady = undefined;
+        }
+      }, 1200);
     } catch (error) {
       console.error('Failed to start terminal:', error);
       this.xterm.write('\r\n\x1b[31mFailed to start terminal. See console for details.\x1b[0m\r\n');
+      this.resolvePromptReady?.();
+      this.resolvePromptReady = undefined;
     }
   }
 
-  private fit(): void {
+  waitUntilReady(): Promise<void> {
+    return this.startPromise;
+  }
+
+  waitUntilPromptReady(): Promise<void> {
+    return this.promptReadyPromise;
+  }
+
+  fit(): void {
     if (!this.isDisposed) {
       this.fitAddon.fit();
 

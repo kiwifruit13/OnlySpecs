@@ -615,6 +615,18 @@ export function registerIpcHandlers() {
     }
   });
 
+  // Delete folder recursively
+  ipcMain.handle('fs:deleteFolder', async (_event, folderPath: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      await fs.rm(folderPath, { recursive: true, force: true });
+      console.log('[FS] Folder deleted:', folderPath);
+      return { success: true };
+    } catch (error: any) {
+      console.error('[FS] Error deleting folder:', error);
+      return { success: false, error: error.message || 'Failed to delete folder' };
+    }
+  });
+
   // Create directory
   ipcMain.handle('fs:createDirectory', async (_event, dirPath: string): Promise<{ success: boolean; error?: string }> => {
     try {
