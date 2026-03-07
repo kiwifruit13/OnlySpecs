@@ -615,4 +615,26 @@ export function registerIpcHandlers() {
     }
   });
 
+  // Create directory
+  ipcMain.handle('fs:createDirectory', async (_event, dirPath: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      await fs.mkdir(dirPath, { recursive: true });
+      console.log('[FS] Directory created:', dirPath);
+      return { success: true };
+    } catch (error: any) {
+      console.error('[FS] Error creating directory:', error);
+      return { success: false, error: error.message || 'Failed to create directory' };
+    }
+  });
+
+  // Check if path exists
+  ipcMain.handle('fs:exists', async (_event, path: string): Promise<{ exists: boolean }> => {
+    try {
+      await fs.access(path);
+      return { exists: true };
+    } catch {
+      return { exists: false };
+    }
+  });
+
 }

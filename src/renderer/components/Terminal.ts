@@ -62,12 +62,14 @@ export class Terminal {
   private unsubscribeExit?: () => void;
   private currentTheme: 'light' | 'dark' = 'dark';
   private showHeader: boolean;
+  private cwd?: string;
 
-  constructor(container: HTMLElement, theme: 'light' | 'dark' = 'dark', showHeader: boolean = true) {
+  constructor(container: HTMLElement, theme: 'light' | 'dark' = 'dark', showHeader: boolean = true, cwd?: string) {
     this.container = container;
     this.sessionId = `terminal-${Date.now()}-${Math.random()}`;
     this.currentTheme = theme;
     this.showHeader = showHeader;
+    this.cwd = cwd;
 
     this.xterm = new XTerminal({
       allowProposedApi: true,
@@ -138,7 +140,7 @@ export class Terminal {
     if (!window.electronAPI) return;
 
     try {
-      await window.electronAPI.createTerminal(this.sessionId);
+      await window.electronAPI.createTerminal(this.sessionId, this.cwd);
 
       // Listen for data from PTY
       this.unsubscribeData = window.electronAPI.onTerminalData(this.sessionId, (data) => {

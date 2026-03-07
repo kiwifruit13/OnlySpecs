@@ -61,6 +61,9 @@ export class EditorWithTerminal {
   private terminals: Map<string, TerminalInstance> = new Map();
   private nextTerminalId: number = 0;
 
+  // Current working directory for terminals
+  private cwd: string | undefined;
+
   // Calculate default height as 50% of container
   private calculateDefaultHeight(): number {
     const containerHeight = this.container.offsetHeight || 600; // Fallback if container not ready
@@ -585,9 +588,12 @@ export class EditorWithTerminal {
     window.dispatchEvent(new Event('resize'));
   }
 
-  private addNewTerminal(): void {
+  private addNewTerminal(cwd?: string): void {
     const terminalId = this.generateTerminalId();
     const sessionId = `terminal-${terminalId}`;
+
+    // Use provided cwd or fallback to stored cwd
+    const terminalCwd = cwd || this.cwd;
 
     // Create terminal container
     const terminalContainer = document.createElement('div');
@@ -624,7 +630,7 @@ export class EditorWithTerminal {
     this.terminalsWrapper.appendChild(terminalContainer);
 
     // Create terminal instance (without header since we have our own)
-    const terminal = new Terminal(terminalContent, this.themeManager.getCurrentTheme(), false);
+    const terminal = new Terminal(terminalContent, this.themeManager.getCurrentTheme(), false, this.cwd);
 
     // Store terminal instance
     this.terminals.set(terminalId, {
@@ -732,6 +738,40 @@ export class EditorWithTerminal {
     return this.diffEditorInstance;
   }
 
+  async runCommandInTerminal(command: string, cwd?: string): Promise<string> {
+    // Update cwd if provided
+    if (cwd) {
+      this.cwd = cwd;
+    }
+
+    // Ensure terminal section is expanded
+    if (!this.isTerminalExpanded) {
+      this.isTerminalExpanded = true;
+      EditorWithTerminal.terminalStates.set(this.editorId, true);
+      this.terminalsContainer.style.display = 'block';
+      this.terminalResizeHandle.style.display = 'block';
+      this.addTerminalBtn.style.display = 'flex';
+      this.terminalToggle.classList.add('active');
+    }
+
+    // Always create a new terminal for running commands
+    this.addNewTerminal();
+    // Wait for terminal to be created
+    await new Promise(resolve => setTimeout(resolve, 150));
+
+    // Get the newly created terminal (last in the map)
+    const newTerminal = Array.from(this.terminals.values()).pop();
+    if (newTerminal && window.electronAPI) {
+      // Focus the terminal
+      newTerminal.terminal.focus();
+      // Write the command to the terminal
+      await window.electronAPI.writeTerminal(newTerminal.sessionId, command + '\r');
+      // Return the sessionId so caller can listen for terminal exit
+      return newTerminal.sessionId;
+    }
+    throw new Error('Failed to create terminal');
+  }
+
   setOriginalEditorInstance(instance: any): void {
     this.originalEditorInstance = instance;
   }
@@ -742,6 +782,14 @@ export class EditorWithTerminal {
 
   getEditorId(): string {
     return this.editorId;
+  }
+
+  getCwd(): string | undefined {
+    return this.cwd;
+  }
+
+  setCwd(cwd: string): void {
+    this.cwd = cwd;
   }
 
   setTheme(theme: 'light' | 'dark'): void {

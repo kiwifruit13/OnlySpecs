@@ -101,6 +101,14 @@ const electronAPI = {
   // Delete file
   deleteFile: (filePath: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke('fs:deleteFile', filePath),
+
+  // Create directory
+  createDirectory: (dirPath: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('fs:createDirectory', dirPath),
+
+  // Check if path exists
+  pathExists: (path: string): Promise<{ exists: boolean }> =>
+    ipcRenderer.invoke('fs:exists', path),
 };
 
 export interface ElectronAPIType {
@@ -128,6 +136,8 @@ export interface ElectronAPIType {
   readDirectory(dirPath: string): Promise<{ success: boolean; entries?: Array<{ name: string; path: string; isDirectory: boolean }>; error?: string }>;
   createProject(): Promise<{ success: boolean; projectPath?: string; error?: string }>;
   deleteFile(filePath: string): Promise<{ success: boolean; error?: string }>;
+  createDirectory(dirPath: string): Promise<{ success: boolean; error?: string }>;
+  pathExists(path: string): Promise<{ exists: boolean }>;
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

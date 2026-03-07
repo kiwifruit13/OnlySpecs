@@ -349,11 +349,82 @@ class App {
     this.stateManager.renameEditor(id, newName);
   }
 
-  private handleGenerateFromSpecs(id: string): void {
+  private async handleGenerateFromSpecs(id: string): Promise<void> {
     console.log('[App] Generate from Specs for editor:', id);
-    // TODO: Implement generate from specs functionality
-    // This could open a modal or trigger a Claude prompt
-    alert('Generate from Specs functionality will be implemented here.\n\nEditor ID: ' + id);
+
+    // Get the editor state
+    const editor = this.stateManager.getEditor(id);
+    if (!editor) {
+      alert('Editor not found');
+      return;
+    }
+
+    // Check if we have a project root
+    if (!this.projectRoot) {
+      alert('Please open a project folder first');
+      return;
+    }
+
+    // Extract version from spec file name (e.g., specs_v0002.md -> 0002)
+    const specsPattern = /^specs_v(\d+)\.md$/i;
+    const match = editor.name.match(specsPattern);
+
+    if (!match) {
+      alert('This feature is only available for specs files (e.g., specs_v0001.md)');
+      return;
+    }
+
+    const version = match[1];
+    const codeFolderName = `code_v${version}`;
+    const codeFolderPath = `${this.projectRoot}/${codeFolderName}`;
+    const specsFileName = editor.name;
+
+    if (!window.electronAPI) {
+      alert('electronAPI not available');
+      return;
+    }
+
+    // Check if code folder exists, create if not
+    const existsResult = await window.electronAPI.pathExists(codeFolderPath);
+    if (!existsResult.exists) {
+      console.log('[App] Creating code folder:', codeFolderPath);
+      const createResult = await window.electronAPI.createDirectory(codeFolderPath);
+      if (!createResult.success) {
+        alert(`Failed to create code folder: ${createResult.error}`);
+        return;
+      }
+      // Refresh file explorer to show the new folder
+      if (this.fileExplorer) {
+        await this.fileExplorer.refresh();
+      }
+    }
+
+    // Get the EditorWithTerminal instance to run command in terminal
+    const editorWithTerminal = this.editorContainer.getEditorWithTerminal(id);
+    if (!editorWithTerminal) {
+      alert('Editor terminal not found');
+      return;
+    }
+
+    // Set the cwd for the terminal to use the project root
+    editorWithTerminal.setCwd(this.projectRoot);
+
+    // Build the command (cwd is set via setCwd, so no need for cd)
+    const command = `claude --dangerously-skip-permissions -p "Please read the ${specsFileName} file and generate the implementation code for it at ${codeFolderPath}, then save the code in the ${codeFolderName}. DO NOT ASK ANY QUESTIONS, JUST OUTPUT THE CODE" && exit`;
+
+    console.log('[App] Running command:', command);
+
+    // Run the command in the terminal and get the sessionId
+    const sessionId = await editorWithTerminal.runCommandInTerminal(command);
+
+    // Listen for terminal exit to do final refresh
+    const exitUnsubscribe = window.electronAPI.onTerminalExit(sessionId, async () => {
+      exitUnsubscribe();
+      // Final refresh when command completes
+      if (this.fileExplorer) {
+        await this.fileExplorer.refresh();
+      }
+    });
   }
 
   private handleReviewAndTest(id: string): void {
